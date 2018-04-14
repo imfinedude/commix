@@ -315,7 +315,6 @@ def ps_check_failed():
       print settings.print_error_msg(err_msg)
       pass
 
-
 """
 Check if CGI scripts (shellshock injection).
 """
@@ -620,33 +619,6 @@ def print_non_listed_params(check_parameters, http_request_method, header_name):
   if menu.options.skip_parameter != None:
     check_skipped_params(check_parameters)
 
-
-# """
-# Check for whitespaces
-# """
-# def check_whitespaces():
-#   if settings.WHITESPACE[0] != "%20" and settings.WHITESPACE[0] != urllib.unquote("%20"):
-#     warn_msg = "Whitespaces are important for time-relative techniques, "
-#     warn_msg += "thus whitespace characters had been reset to default."
-#     print settings.print_warning_msg(warn_msg)
-#   if settings.WHITESPACE[0] != urllib.unquote("%20"):
-#     whitespace = " "
-#     return whitespace  
-
-"""
-Check for loaded tamper scripts
-"""
-# def loaded_tamper_scripts():
-#   try:
-#     menu.options.tamper.lower()
-#     info_msg = "Loaded tamper script(s): "
-#     print settings.print_info_msg(info_msg)
-#     # Check the provided tamper script(s)
-#     for tfile in re.split(settings.PARAMETER_SPLITTING_REGEX, menu.options.tamper.lower()):
-#       print settings.SUB_CONTENT_SIGN + tfile
-#   except:
-#     pass
-
 """
 Tamper script checker
 """
@@ -656,7 +628,7 @@ def tamper_scripts():
     print settings.print_info_msg(info_msg)
     # Check the provided tamper script(s)
     tamper_script_counter = 0
-    for tfile in re.split(settings.PARAMETER_SPLITTING_REGEX, menu.options.tamper.lower()):
+    for tfile in list(set(re.split(settings.PARAMETER_SPLITTING_REGEX, menu.options.tamper.lower()))):
       if "hexencode" or "base64encode" == tfile:
         settings.MULTI_ENCODED_PAYLOAD.append(tfile)
 
@@ -667,10 +639,12 @@ def tamper_scripts():
           print settings.print_error_msg(err_msg)
 
       if os.path.isfile(check_tfile):
-        tamper_script_counter =  tamper_script_counter + 1
+        tamper_script_counter = tamper_script_counter + 1
         import importlib
         check_tfile = check_tfile.replace("/",".")
-        importlib.import_module(check_tfile.split(".py")[0])
+        import_tamper = check_tfile.split(".py")[0]
+        print settings.SUB_CONTENT_SIGN + import_tamper.split(".")[3]
+        importlib.import_module(import_tamper)
 
 """
 Check if the payload output seems to be hex.
@@ -731,9 +705,24 @@ def whitespace_check(payload):
       
 
 """
+Check for added caret between the characters of the generated payloads.
+"""
+def other_symbols(payload):
+  # Check for symbols
+  if payload.count("^") >= 10:
+    if not settings.TAMPER_SCRIPTS['caret']:
+      if menu.options.tamper:
+        menu.options.tamper = menu.options.tamper + ",caret"
+      else:
+        menu.options.tamper = "caret"  
+    from src.core.tamper import caret
+    payload = caret.transform(payload)
+
+"""
 Check for (multiple) added quotes between the characters of the generated payloads.
 """
 def check_quotes(payload):
+  # Check for single quotes
   if payload.count("''") >= 10:
     if not settings.TAMPER_SCRIPTS['singlequotes']:
       if menu.options.tamper:
@@ -742,7 +731,6 @@ def check_quotes(payload):
         menu.options.tamper = "singlequotes"  
     from src.core.tamper import singlequotes
     payload = singlequotes.transform(payload)
-
 
 """
 Recognise the payload.
@@ -788,6 +776,7 @@ Check for stored payloads and enable tamper scripts.
 def check_for_stored_tamper(payload):
   decoded_payload = recognise_payload(payload)
   whitespace_check(decoded_payload)
+  other_symbols(decoded_payload)
   check_quotes(decoded_payload)
   tamper_scripts()
 
@@ -795,13 +784,17 @@ def check_for_stored_tamper(payload):
 Perform payload modification
 """
 def perform_payload_modification(payload):
-  for encode_type in settings.MULTI_ENCODED_PAYLOAD[::-1]:
+  for encode_type in list(set(settings.MULTI_ENCODED_PAYLOAD[::-1])):
     # Add single quotes.
     if encode_type == 'singlequotes':
       from src.core.tamper import singlequotes
       payload = singlequotes.transform(payload)
+    # Add caret symbol.  
+    elif encode_type == 'caret':
+      from src.core.tamper import caret
+      payload = caret.transform(payload) 
 
-  for encode_type in settings.MULTI_ENCODED_PAYLOAD[::-1]:
+  for encode_type in list(set(settings.MULTI_ENCODED_PAYLOAD[::-1])):
     # Encode payload to hex format.    
     if encode_type == 'base64encode':
       from src.core.tamper import base64encode
@@ -813,7 +806,6 @@ def perform_payload_modification(payload):
       payload = hexencode.encode(payload)
 
   return payload
-
 
 """
 Skip parameters when the provided value is empty.

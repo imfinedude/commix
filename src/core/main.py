@@ -70,6 +70,10 @@ else:
       readline_error = True
 pass
 
+# Set default encoding (UTF-8)
+reload(sys)
+sys.setdefaultencoding(settings.DEFAULT_ENCODING)
+
 # Use Colorama to make Termcolor work on Windows too :)
 if settings.IS_WINDOWS:
   init()
@@ -270,8 +274,12 @@ def logs_filename_creation():
     try:
       os.mkdir(output_dir)   
     except OSError, err_msg:
-      print settings.print_critical_msg(str(err_msg.args[0]).split("] ")[1] + ".")
-      sys.exit(0)
+      try:
+        error_msg = str(err_msg.args[0]).split("] ")[1] + "."
+      except IndexError:
+        error_msg = str(err_msg.args[0]) + "."
+      print settings.print_critical_msg(error_msg)
+      raise SystemExit()
 
   # The logs filename construction.
   filename = logs.create_log_file(url, output_dir)

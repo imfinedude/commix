@@ -1,4 +1,6 @@
 ## Version 2.4 (upcoming)
+* Fixed: Minor bug-fix regarding loading multiple tamper scripts (during the exploitation phase). 
+* Added: New tamper script "caret.py" that adds the caret symbol (^) between the characters of the generated payloads (for windows targets).
 * Added: New tamper script "singlequotes.py" that adds single quotes (') between the characters of the generated payloads (for *nix targets).
 
 ## Version 2.3 (2018-03-07)
@@ -293,5 +295,5 @@
 * Removed: The "boolean-based" (blind) technique.
 * Added: More Options.
 
-## Version 0.1a (2014-20-12)
+## Version 0.1a (2014-12-20)
 * The initial release {aka the Birth!}.
